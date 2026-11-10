@@ -127,6 +127,7 @@
     state.answers = {};
     state.locked = false;
     state.result = null;
+    $('share-fallback').hidden = true;
     renderQuestion();
     showScreen('quiz', 'question-text');
   }
@@ -359,26 +360,43 @@
     showToast.timer = setTimeout(function () { t.hidden = true; }, 2600);
   }
 
+  /* داخل إطار مضمَّن (iframe) لا تعمل قائمة المشاركة، ورابط الصفحة ليس رابطها الحقيقي */
+  function isFramed() {
+    try { return window.self !== window.top; } catch (e) { return true; }
+  }
+
+  /* إن تعذّر النسخ تلقائيًا نعرض النص محدَّدًا ليُنسخ يدويًا */
+  function showShareText(text) {
+    var box = $('share-text');
+    box.value = text;
+    $('share-fallback').hidden = false;
+    box.focus();
+    box.select();
+  }
+
   function share() {
     var res = state.result;
     if (!res) return;
     var quad = QUADRANTS[res.quadrant];
     var text = 'نتيجتي في اختبار «ضحية أم نرجسي؟»: ' + quad.title +
       '. ردّة فعلي تحت الضغط: ' + res.dominant.map(responseName).join(' و') + '. وأنت، أيّهم أنت؟';
-    var url = /^https?:/.test(location.protocol) ? location.href.split('#')[0] : '';
+    var framed = isFramed();
+    var url = !framed && /^https?:/.test(location.protocol) ? location.href.split('#')[0] : '';
+    var full = url ? text + '\n' + url : text;
 
-    if (navigator.share) {
-      navigator.share({ title: 'ضحية أم نرجسي؟', text: text, url: url || undefined }).catch(function () {});
+    if (navigator.share && !framed) {
+      navigator.share({ title: 'ضحية أم نرجسي؟', text: text, url: url || undefined }).catch(function (err) {
+        if (!err || err.name !== 'AbortError') showShareText(full);
+      });
       return;
     }
-    var full = url ? text + '\n' + url : text;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(full).then(
         function () { showToast('تم نسخ النتيجة، الصقها حيث تريد'); },
-        function () { showToast(full); }
+        function () { showShareText(full); }
       );
     } else {
-      showToast(full);
+      showShareText(full);
     }
   }
 

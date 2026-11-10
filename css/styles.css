@@ -38,12 +38,13 @@ button { font: inherit; }
 .app {
   max-width: 560px;
   margin: 0 auto;
-  padding: 36px 16px 56px;
-  min-height: 100vh;
-  min-height: 100dvh;
+  padding-block: 36px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 
-.screen { animation: fade-in 0.35s ease both; }
+/* الشاشة تظهر مرئية من البداية، وتنزلق قليلًا فقط */
+.screen { animation: slide-in 0.35s ease both; }
 .screen[hidden] { display: none; }
 
 h1:focus, h2:focus { outline: none; }
@@ -560,6 +561,27 @@ h1:focus, h2:focus { outline: none; }
 
 .actions .btn { flex: 1 1 200px; }
 
+.share-fallback {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 0.95rem;
+}
+
+.share-fallback textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.share-fallback textarea:focus-visible { outline: 3px solid #5b84d6; outline-offset: 2px; }
+
 .disclaimer {
   margin: 28px 0 0;
   color: var(--muted);
@@ -572,9 +594,9 @@ h1:focus, h2:focus { outline: none; }
 
 .toast {
   position: fixed;
-  left: 16px;
-  right: 16px;
-  bottom: 24px;
+  left: max(16px, env(safe-area-inset-left, 0px));
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   z-index: 10;
   width: fit-content;
   max-width: calc(100% - 32px);
@@ -595,6 +617,11 @@ h1:focus, h2:focus { outline: none; }
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
+}
+
+@keyframes slide-in {
+  from { transform: translateY(6px); }
+  to { transform: none; }
 }
 
 @keyframes rise-in {
