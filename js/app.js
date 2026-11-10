@@ -2,11 +2,11 @@
   'use strict';
 
   var DATA = window.QUIZ_DATA;
-  var QUESTIONS = DATA.questions;
+  var engine = window.QuizEngine.create(DATA);
+  var NODES = DATA.nodes;
   var QUADRANTS = DATA.quadrants;
   var RESPONSES = DATA.responses;
-  var PARTS = DATA.parts;
-  var RESPONSE_ORDER = ['fight', 'flight', 'freeze', 'fawn'];
+  var RESPONSE_ORDER = window.QuizEngine.RESPONSE_ORDER;
   var ADVANCE_DELAY = 260; // ms بين اختيار الإجابة والانتقال للسؤال التالي
 
   /* ترتيب المربعات داخل المصفوفة (يسار→يمين، أعلى→أسفل) كما في الصورة */
@@ -25,9 +25,17 @@
     [60.3, 59.1], [66.3, 61.3], [68.0, 66.2], [57.5, 67.4]
   ];
 
+  /*
+   * يحوّل قيمة من [-1, 1] إلى بُعد عن مركز المصفوفة (٪) داخل المربع الصحيح، فلا تقع النقطة
+   * أبدًا في الفراغ بين المربعات. أفقيًا: من 8% إلى 38%. عموديًا تبقى النقطة في الشريط القريب
+   * من المحور (4%–15%) — حيث النقاط في الصورة — كي لا تغطي اسم المربع.
+   */
+  var X_RANGE = [8, 38];
+  var Y_RANGE = [4, 15];
+
   var state = {
-    index: 0,
-    answers: QUESTIONS.map(function () { return null; }),
+    path: [DATA.start], // الأسئلة التي مرّ بها المستخدم بالترتيب؛ آخرها هو السؤال الحالي
+    answers: {}, // معرّف السؤال ← رقم الخيار
     locked: false,
     result: null
   };
@@ -46,6 +54,13 @@
     });
   }
 
+  function el(tag, className, text) {
+    var e = document.createElement(tag);
+    if (className) e.className = className;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
   function prefersReducedMotion() {
     return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
@@ -54,6 +69,15 @@
     // ٣–١٠ تُجمع «أسئلة»، و١١ فما فوق «سؤالًا»
     return arNum(n) + (n >= 3 && n <= 10 ? ' أسئلة' : ' سؤالًا');
   }
+
+  function stageOf(module) {
+    for (var i = 0; i < DATA.stages.length; i++) {
+      if (DATA.stages[i].modules.indexOf(module) !== -1) return DATA.stages[i];
+    }
+    return null;
+  }
+
+  function currentId() { return state.path[state.path.length - 1]; }
 
   /* ---------------- المصفوفة ---------------- */
 
@@ -81,60 +105,8 @@
     return html;
   }
 
-  /*
-   * يحوّل قيمة من [-1, 1] إلى بُعد عن مركز المصفوفة (٪) داخل المربع الصحيح، فلا تقع النقطة
-   * أبدًا في الفراغ بين المربعات. أفقيًا: من 8% إلى 38%. عموديًا تبقى النقطة في الشريط القريب
-   * من المحور (4%–15%) — حيث النقاط في الصورة — كي لا تغطي اسم المربع.
-   */
-  var X_RANGE = [8, 38];
-  var Y_RANGE = [4, 15];
-
   function axisOffset(norm, range) {
     return range[0] + Math.min(1, Math.abs(norm)) * (range[1] - range[0]);
-  }
-
-  /* ---------------- الحساب ---------------- */
-
-  function computeResult(answers) {
-    var x = 0, y = 0, xMax = 0, yMax = 0, rTotal = 0;
-    var counts = { fight: 0, flight: 0, freeze: 0, fawn: 0 };
-
-    QUESTIONS.forEach(function (q, qi) {
-      var maxX = 0, maxY = 0;
-      q.options.forEach(function (o) {
-        maxX = Math.max(maxX, Math.abs(o.x || 0));
-        maxY = Math.max(maxY, Math.abs(o.y || 0));
-      });
-      xMax += maxX;
-      yMax += maxY;
-
-      var a = answers[qi];
-      if (a === null || a === undefined) return;
-      var o = q.options[a];
-      x += o.x || 0;
-      y += o.y || 0;
-      if (o.r) { counts[o.r] += 1; rTotal += 1; }
-    });
-
-    var top = Math.max.apply(null, RESPONSE_ORDER.map(function (k) { return counts[k]; }));
-    var dominant = top > 0 ? RESPONSE_ORDER.filter(function (k) { return counts[k] === top; }) : [];
-
-    // التعادل على محور ضحية/نرجسي يُحسم بردود الفعل: (قتال+هروب) مقابل (تجمّد+إرضاء)
-    var narcissist = x > 0 || (x === 0 && counts.fight + counts.flight > counts.freeze + counts.fawn);
-    // التعادل على محور الوعي يُحسب «يدرك»
-    var aware = y >= 0;
-
-    return {
-      x: x, y: y,
-      xNorm: xMax ? x / xMax : 0,
-      yNorm: yMax ? y / yMax : 0,
-      narcissist: narcissist,
-      aware: aware,
-      quadrant: (narcissist ? 'narcissist' : 'victim') + '-' + (aware ? 'aware' : 'unaware'),
-      counts: counts,
-      rTotal: rTotal,
-      dominant: dominant
-    };
   }
 
   /* ---------------- التنقل بين الشاشات ---------------- */
@@ -145,41 +117,51 @@
     });
     window.scrollTo(0, 0);
     if (focusId) {
-      var el = $(focusId);
-      if (el) el.focus({ preventScroll: true });
+      var target = $(focusId);
+      if (target) target.focus({ preventScroll: true });
     }
   }
 
   function startQuiz() {
-    state.index = 0;
-    state.answers = QUESTIONS.map(function () { return null; });
+    state.path = [DATA.start];
+    state.answers = {};
     state.locked = false;
+    state.result = null;
     renderQuestion();
     showScreen('quiz', 'question-text');
   }
 
   /* ---------------- شاشة الأسئلة ---------------- */
 
-  function renderQuestion() {
-    var q = QUESTIONS[state.index];
-    var total = QUESTIONS.length;
+  function totalQuestions() {
+    // المسارات كلها بطول واحد، لكن نحسب الطول المتبقي من الشجرة كي يبقى العدد صحيحًا إن تغيّرت
+    return state.path.length - 1 + engine.remaining(currentId());
+  }
 
-    $('progress-text').textContent = 'سؤال ' + arNum(state.index + 1) + ' من ' + arNum(total);
-    $('progress-bar').style.width = ((state.index) / total * 100) + '%';
-    $('part-label').textContent = PARTS[q.part] ? PARTS[q.part].label : '';
-    $('part-label').setAttribute('data-part', q.part);
-    $('question-text').textContent = q.text;
+  function renderQuestion() {
+    var id = currentId();
+    var node = NODES[id];
+    var total = totalQuestions();
+    var stage = stageOf(node.module);
+
+    $('progress-text').textContent = 'سؤال ' + arNum(state.path.length) + ' من ' + arNum(total);
+    $('progress-bar').style.width = ((state.path.length - 1) / total * 100) + '%';
+    $('part-label').textContent = stage
+      ? 'المرحلة ' + arNum(stage.n) + ' من ' + arNum(DATA.stages.length) + ': ' + stage.label
+      : '';
+    $('part-label').setAttribute('data-stage', stage ? stage.n : '');
+    $('question-text').textContent = node.text;
 
     var box = $('options');
     box.innerHTML = '';
-    q.options.forEach(function (o, i) {
-      var btn = document.createElement('button');
+    node.options.forEach(function (o, i) {
+      var btn = el('button', 'option');
       btn.type = 'button';
-      btn.className = 'option';
-      btn.setAttribute('aria-pressed', state.answers[state.index] === i ? 'true' : 'false');
-      if (state.answers[state.index] === i) btn.classList.add('is-selected');
-      btn.innerHTML = '<span class="option-num" aria-hidden="true">' + arNum(i + 1) + '</span><span class="option-text"></span>';
-      btn.querySelector('.option-text').textContent = o.text;
+      var selected = state.answers[id] === i;
+      btn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      if (selected) btn.classList.add('is-selected');
+      btn.appendChild(el('span', 'option-num', arNum(i + 1))).setAttribute('aria-hidden', 'true');
+      btn.appendChild(el('span', 'option-text', o.text));
       btn.addEventListener('click', function () { selectOption(i); });
       box.appendChild(btn);
     });
@@ -193,18 +175,20 @@
   function selectOption(i) {
     if (state.locked) return;
     state.locked = true;
-    state.answers[state.index] = i;
+    var id = currentId();
+    state.answers[id] = i;
 
     Array.prototype.forEach.call($('options').children, function (btn, bi) {
       btn.classList.toggle('is-selected', bi === i);
       btn.setAttribute('aria-pressed', bi === i ? 'true' : 'false');
     });
-    $('progress-bar').style.width = ((state.index + 1) / QUESTIONS.length * 100) + '%';
+    $('progress-bar').style.width = (state.path.length / totalQuestions() * 100) + '%';
 
     window.setTimeout(function () {
       state.locked = false;
-      if (state.index < QUESTIONS.length - 1) {
-        state.index += 1;
+      var next = engine.nextNode(id, i, state.path, state.answers);
+      if (next) {
+        state.path.push(next);
         renderQuestion();
         $('question-text').focus({ preventScroll: true });
         window.scrollTo(0, 0);
@@ -216,11 +200,12 @@
 
   function goBack() {
     if (state.locked) return;
-    if (state.index === 0) {
+    if (state.path.length === 1) {
       showScreen('intro', 'intro-title');
       return;
     }
-    state.index -= 1;
+    // نعود خطوة في المسار؛ إن تغيّرت الإجابة فسيُعاد حساب الفرع التالي
+    state.path.pop();
     renderQuestion();
     $('question-text').focus({ preventScroll: true });
   }
@@ -228,15 +213,13 @@
   /* ---------------- شاشة النتيجة ---------------- */
 
   function finish() {
-    state.result = computeResult(state.answers);
+    state.result = engine.result(state.path, state.answers);
     renderResult(state.result);
     showScreen('result', 'result-title');
     placeMarker(state.result);
   }
 
-  function responseNames(keys) {
-    return keys.map(function (k) { return RESPONSES[k].emoji + ' ' + RESPONSES[k].name; });
-  }
+  function responseName(k) { return RESPONSES[k].emoji + ' ' + RESPONSES[k].name; }
 
   function renderResult(res) {
     var quad = QUADRANTS[res.quadrant];
@@ -245,42 +228,92 @@
     $('result-title').style.setProperty('--accent', quad.color);
     $('result-matrix').innerHTML = matrixHTML({ result: true, active: res.quadrant });
 
-    var card = $('quadrant-card');
-    card.style.setProperty('--accent', quad.color);
+    $('quadrant-card').style.setProperty('--accent', quad.color);
     $('quadrant-desc').textContent = quad.description;
     $('quadrant-next').textContent = quad.next;
     var signs = $('quadrant-signs');
     signs.innerHTML = '';
-    quad.signs.forEach(function (s) {
-      var li = document.createElement('li');
-      li.textContent = s;
-      signs.appendChild(li);
-    });
+    quad.signs.forEach(function (s) { signs.appendChild(el('li', '', s)); });
 
-    // ردّة الفعل الغالبة
+    renderResponse(res);
+    renderDeeper(res);
+    renderTree(res);
+  }
+
+  function renderResponse(res) {
     var dom = res.dominant;
-    var title = dom.length > 1 ? 'مزيج من ' + responseNames(dom).join(' و') : responseNames(dom).join('');
-    $('response-title').textContent = title;
+    $('response-title').textContent = dom.length > 1
+      ? 'مزيج من ' + dom.map(responseName).join(' و')
+      : dom.map(responseName).join('');
+
     var desc = $('response-desc');
     desc.innerHTML = '';
     dom.forEach(function (k) {
-      var p = document.createElement('p');
-      p.className = 'card-text';
-      p.textContent = (dom.length > 1 ? RESPONSES[k].emoji + ' ' + RESPONSES[k].name + ': ' : '') + RESPONSES[k].description;
-      desc.appendChild(p);
+      var r = RESPONSES[k];
+      desc.appendChild(el('p', 'card-text', (dom.length > 1 ? r.emoji + ' ' + r.name + ': ' : '') + r.description));
+    });
+
+    if (res.secondary) {
+      var hybrid = el('p', 'card-text');
+      hybrid.appendChild(el('strong', '', 'نمطك الهجين: ' + RESPONSES[dom[0]].name + '–' + RESPONSES[res.secondary].name + '. '));
+      hybrid.appendChild(document.createTextNode(
+        'تبدأ غالبًا بـ«' + RESPONSES[dom[0]].name + '»، وحين لا ينجح تنتقل إلى «' + RESPONSES[res.secondary].name + '».'
+      ));
+      desc.appendChild(hybrid);
+    }
+
+    dom.forEach(function (k) {
+      var healthy = el('p', 'card-text healthy');
+      healthy.appendChild(el('strong', '', 'النسخة الصحية' + (dom.length > 1 ? ' من «' + RESPONSES[k].name + '»' : '') + ': '));
+      healthy.appendChild(document.createTextNode(RESPONSES[k].healthy));
+      desc.appendChild(healthy);
     });
 
     var bars = $('response-bars');
     bars.innerHTML = '';
     RESPONSE_ORDER.forEach(function (k) {
       var pct = res.rTotal ? Math.round(res.counts[k] / res.rTotal * 100) : 0;
-      var row = document.createElement('div');
-      row.className = 'bar-row' + (dom.indexOf(k) !== -1 ? ' is-dominant' : '');
+      var row = el('div', 'bar-row' + (dom.indexOf(k) !== -1 ? ' is-dominant' : ''));
       row.innerHTML =
         '<span class="bar-name"><span aria-hidden="true">' + RESPONSES[k].emoji + '</span> ' + escapeHTML(RESPONSES[k].name) + '</span>' +
         '<span class="bar" role="img" aria-label="' + escapeHTML(RESPONSES[k].name) + ' ' + arNum(pct) + '٪"><i style="width:' + pct + '%"></i></span>' +
         '<span class="bar-pct">' + arNum(pct) + '٪</span>';
       bars.appendChild(row);
+    });
+  }
+
+  function insightBlock(item) {
+    var wrap = el('div', 'insight');
+    wrap.appendChild(el('h4', 'insight-title', item.title));
+    wrap.appendChild(el('p', 'card-text', item.text));
+    wrap.appendChild(el('p', 'ref', item.refs)).setAttribute('dir', 'ltr');
+    return wrap;
+  }
+
+  function renderDeeper(res) {
+    var box = $('deeper-body');
+    box.innerHTML = '';
+    if (res.subtype && DATA.subtypes[res.subtype]) box.appendChild(insightBlock(DATA.subtypes[res.subtype]));
+    if (res.awareness && DATA.awarenessStyles[res.awareness]) box.appendChild(insightBlock(DATA.awarenessStyles[res.awareness]));
+    $('deeper-card').hidden = !box.children.length;
+  }
+
+  function renderTree(res) {
+    var list = $('tree-path');
+    list.innerHTML = '';
+    DATA.treeLevels.forEach(function (level, li) {
+      var stage = DATA.stages[li];
+      var item = el('li', 'tree-level');
+      item.appendChild(el('span', 'tree-stage', 'المرحلة ' + arNum(li + 1) + (stage ? ': ' + stage.label : '')));
+      var branches = el('div', 'tree-branches');
+      level.forEach(function (m) {
+        var taken = res.modules.indexOf(m) !== -1;
+        var chip = el('span', 'branch' + (taken ? ' is-taken' : ''), DATA.modules[m]);
+        if (taken) chip.setAttribute('aria-current', 'step');
+        branches.appendChild(chip);
+      });
+      item.appendChild(branches);
+      list.appendChild(item);
     });
   }
 
@@ -306,6 +339,16 @@
     requestAnimationFrame(function () { requestAnimationFrame(apply); });
   }
 
+  function renderReferences() {
+    var list = $('references-list');
+    DATA.references.forEach(function (r) {
+      var li = el('li');
+      li.appendChild(el('span', 'ref-about', r.about));
+      li.appendChild(el('span', 'ref', r.cite)).setAttribute('dir', 'ltr');
+      list.appendChild(li);
+    });
+  }
+
   /* ---------------- المشاركة ---------------- */
 
   function showToast(msg) {
@@ -321,7 +364,7 @@
     if (!res) return;
     var quad = QUADRANTS[res.quadrant];
     var text = 'نتيجتي في اختبار «ضحية أم نرجسي؟»: ' + quad.title +
-      '. ردّة فعلي تحت الضغط: ' + responseNames(res.dominant).join(' و') + '. وأنت، أيّهم أنت؟';
+      '. ردّة فعلي تحت الضغط: ' + res.dominant.map(responseName).join(' و') + '. وأنت، أيّهم أنت؟';
     var url = /^https?:/.test(location.protocol) ? location.href.split('#')[0] : '';
 
     if (navigator.share) {
@@ -343,7 +386,8 @@
 
   function init() {
     $('intro-matrix').innerHTML = matrixHTML();
-    $('intro-meta').textContent = questionCountLabel(QUESTIONS.length) + ' · ٣ دقائق تقريبًا';
+    $('intro-meta').textContent = questionCountLabel(engine.remaining(DATA.start)) + ' · تتفرّع الأسئلة حسب إجاباتك';
+    renderReferences();
 
     $('start-btn').addEventListener('click', startQuiz);
     $('back-btn').addEventListener('click', goBack);
@@ -353,7 +397,7 @@
     document.addEventListener('keydown', function (e) {
       if ($('screen-quiz').hidden || e.altKey || e.ctrlKey || e.metaKey) return;
       var map = { '1': 0, '2': 1, '3': 2, '4': 3, '١': 0, '٢': 1, '٣': 2, '٤': 3 };
-      if (Object.prototype.hasOwnProperty.call(map, e.key) && map[e.key] < QUESTIONS[state.index].options.length) {
+      if (Object.prototype.hasOwnProperty.call(map, e.key) && map[e.key] < NODES[currentId()].options.length) {
         e.preventDefault();
         selectOption(map[e.key]);
       }
@@ -361,7 +405,7 @@
   }
 
   // متاح للاختبارات الآلية
-  window.QuizApp = { computeResult: computeResult, questions: QUESTIONS };
+  window.QuizApp = { engine: engine, state: state };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

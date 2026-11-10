@@ -265,8 +265,9 @@ h1:focus, h2:focus { outline: none; }
   font-weight: 700;
 }
 
-.part-label[data-part="B"] { background: var(--narcissist-unaware); }
-.part-label[data-part="C"] { background: var(--narcissist-aware); }
+.part-label[data-stage="2"] { background: var(--narcissist-unaware); }
+.part-label[data-stage="3"] { background: var(--victim-aware); }
+.part-label[data-stage="4"] { background: var(--narcissist-aware); }
 
 .question {
   margin: 14px 0 22px;
@@ -412,6 +413,142 @@ h1:focus, h2:focus { outline: none; }
 .bar-row.is-dominant .bar i { background: var(--ink); }
 
 .bar-pct { text-align: end; }
+
+.card-text.small,
+.small { font-size: 0.92rem; color: var(--muted); }
+
+.healthy {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 0.95rem;
+}
+
+/* ---------- تحليل أعمق ---------- */
+
+.card-deeper { border-top-color: var(--victim-aware); }
+.card-deeper .eyebrow,
+.card-tree .eyebrow { text-align: start; }
+.card-deeper[hidden] { display: none; }
+
+.insight + .insight {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.insight-title {
+  margin: 10px 0 4px;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.ref {
+  display: block;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- مسار الشجرة ---------- */
+
+.card-tree { border-top-color: var(--narcissist-aware); }
+
+.tree {
+  position: relative;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tree-level {
+  position: relative;
+  padding-inline-start: 26px;
+  padding-bottom: 16px;
+}
+
+.tree-level:last-child { padding-bottom: 0; }
+
+/* الخط الرابط والعقدة */
+.tree-level::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 6px;
+  top: 10px;
+  bottom: -10px;
+  width: 2px;
+  background: var(--line);
+}
+
+.tree-level:last-child::before { display: none; }
+
+.tree-level::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: 0 0 0 3px var(--surface);
+}
+
+.tree-stage {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.tree-branches { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.branch {
+  padding: 3px 10px;
+  border: 1px dashed #c4c4c4;
+  border-radius: 99px;
+  color: #9a9a9a;
+  font-size: 0.85rem;
+}
+
+.branch.is-taken {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ---------- المراجع ---------- */
+
+.science {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.science summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.science summary:focus-visible { outline: 3px solid #5b84d6; outline-offset: 3px; }
+
+.science .card-text { margin-top: 10px; }
+
+.references {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ref-about { display: block; font-size: 0.92rem; font-weight: 500; }
 
 .actions {
   display: flex;

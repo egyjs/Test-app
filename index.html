@@ -24,7 +24,7 @@
 
       <div class="cta">
         <button type="button" class="btn btn-primary" id="start-btn">ابدأ الاختبار</button>
-        <p class="meta" id="intro-meta">١٥ سؤالًا · ٣ دقائق تقريبًا</p>
+        <p class="meta" id="intro-meta">١٤ سؤالًا · تتفرّع الأسئلة حسب إجاباتك</p>
       </div>
 
       <p class="hook">
@@ -72,6 +72,19 @@
         <div class="bars" id="response-bars"></div>
       </article>
 
+      <article class="card card-deeper" id="deeper-card">
+        <p class="eyebrow">تحليل أعمق</p>
+        <div id="deeper-body"></div>
+      </article>
+
+      <article class="card card-tree">
+        <p class="eyebrow">مسارك في شجرة الأسئلة</p>
+        <p class="card-text small">
+          لم يرَ الجميع الأسئلة نفسها: كل إجابة حدّدت الفرع التالي. هذا هو الطريق الذي سلكته.
+        </p>
+        <ol class="tree" id="tree-path"></ol>
+      </article>
+
       <div class="actions">
         <button type="button" class="btn btn-primary" id="share-btn">شارك النتيجة</button>
         <button type="button" class="btn btn-secondary" id="restart-btn">أعد الاختبار</button>
@@ -81,12 +94,23 @@
         هذا الاختبار للتأمل الذاتي فقط وليس تشخيصًا نفسيًا. كلمتا «ضحية» و«نرجسي» هنا تصفان ميولًا في السلوك تحت الضغط،
         لا اضطرابًا في الشخصية. إذا كنت تتعرض للإساءة أو تشعر بضيق شديد، فتحدّث مع مختص نفسي أو شخص تثق به.
       </p>
+
+      <details class="science">
+        <summary>على ماذا يستند هذا الاختبار؟</summary>
+        <p class="card-text small">
+          الأسئلة مكتوبة خصيصًا لهذا الاختبار ومستوحاة من مفاهيم مدروسة في علم النفس، لكنها ليست بنود مقاييس محكّمة،
+          والاختبار نفسه لم يخضع لدراسة صدق وثبات. تُبنى الشجرة على منطق المقابلات المنظّمة: أسئلة عامة أولًا، ثم أسئلة
+          متابعة تتعمّق فيما ظهر.
+        </p>
+        <ul class="references" id="references-list"></ul>
+      </details>
     </section>
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   </main>
 
   <script src="js/data.js"></script>
+  <script src="js/engine.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
