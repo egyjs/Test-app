@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ضحية أم نرجسي؟</title>
+  <meta name="description" content="اختبار قصير لتأمل الذات: هل تميل إلى دور الضحية أم النرجسي في علاقاتك؟ وما ردة فعلك تحت الضغط: قتال، هروب، تجمّد أم إرضاء؟">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <main class="app">
+
+    <!-- الشاشة 1: البداية -->
+    <section class="screen" id="screen-intro" aria-labelledby="intro-title">
+      <h1 class="title" id="intro-title" tabindex="-1">
+        هل أنت <span class="mark">ضحية</span> أم <span class="mark">نرجسي</span><br>في علاقاتك؟
+      </h1>
+
+      <div class="matrix-slot" id="intro-matrix"></div>
+
+      <div class="cta">
+        <button type="button" class="btn btn-primary" id="start-btn">ابدأ الاختبار</button>
+        <p class="meta" id="intro-meta">١٥ سؤالًا · ٣ دقائق تقريبًا</p>
+      </div>
+
+      <p class="hook">
+        <span aria-hidden="true">😶</span> الضغط نفسه. أربعة ردود فعل. أيّها أنت؟<br>
+        <span aria-hidden="true">🥊</span> قتال · <span aria-hidden="true">🏃</span> هروب ·
+        <span aria-hidden="true">🧊</span> تجمّد · <span aria-hidden="true">🤝</span> إرضاء
+      </p>
+    </section>
+
+    <!-- الشاشة 2: الأسئلة -->
+    <section class="screen" id="screen-quiz" hidden aria-labelledby="question-text">
+      <header class="quiz-head">
+        <button type="button" class="btn-link" id="back-btn">
+          <span aria-hidden="true">→</span> السابق
+        </button>
+        <span class="progress-text" id="progress-text" aria-live="polite"></span>
+      </header>
+      <div class="progress" aria-hidden="true"><div class="progress-bar" id="progress-bar"></div></div>
+
+      <p class="part-label" id="part-label"></p>
+      <h2 class="question" id="question-text" tabindex="-1"></h2>
+      <div class="options" id="options"></div>
+      <p class="kbd-hint">يمكنك أيضًا استخدام الأرقام ١–٤ من لوحة المفاتيح</p>
+    </section>
+
+    <!-- الشاشة 3: النتيجة -->
+    <section class="screen" id="screen-result" hidden aria-labelledby="result-title">
+      <p class="eyebrow">نتيجتك</p>
+      <h2 class="result-title" id="result-title" tabindex="-1"></h2>
+
+      <div class="matrix-slot" id="result-matrix"></div>
+
+      <article class="card" id="quadrant-card">
+        <p class="card-text" id="quadrant-desc"></p>
+        <h3 class="card-heading">علامات</h3>
+        <ul class="signs" id="quadrant-signs"></ul>
+        <h3 class="card-heading">خطوتك التالية</h3>
+        <p class="card-text" id="quadrant-next"></p>
+      </article>
+
+      <article class="card card-response" id="response-card">
+        <p class="eyebrow">ردّة فعلك تحت الضغط</p>
+        <h3 class="response-title" id="response-title"></h3>
+        <div id="response-desc"></div>
+        <div class="bars" id="response-bars"></div>
+      </article>
+
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="share-btn">شارك النتيجة</button>
+        <button type="button" class="btn btn-secondary" id="restart-btn">أعد الاختبار</button>
+      </div>
+
+      <p class="disclaimer">
+        هذا الاختبار للتأمل الذاتي فقط وليس تشخيصًا نفسيًا. كلمتا «ضحية» و«نرجسي» هنا تصفان ميولًا في السلوك تحت الضغط،
+        لا اضطرابًا في الشخصية. إذا كنت تتعرض للإساءة أو تشعر بضيق شديد، فتحدّث مع مختص نفسي أو شخص تثق به.
+      </p>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
